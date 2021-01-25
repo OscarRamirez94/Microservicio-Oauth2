@@ -17,6 +17,8 @@ import org.springframework.stereotype.Service;
 import com.example.oauth.clients.IUsuarioFeignClient;
 import com.example.usuarioscommons.entity.Usuario;
 
+import feign.FeignException;
+
 @Service
 public class UsuarioService implements IUsuarioService,UserDetailsService {
 	
@@ -32,12 +34,11 @@ public class UsuarioService implements IUsuarioService,UserDetailsService {
 
 	@Override
 	public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+		try {
+		System.out.println("usuarioService :: username :: " + username);
+		
 		Usuario usuario = client.findByUsername(username);
 
-		if(usuario == null) {
-			log.error("Error en el login, no existe el usuario '"+username+"' en el sistema");
-			throw new UsernameNotFoundException("Error en el login, no existe el usuario '"+username+"' en el sistema");
-		}
 		List<GrantedAuthority> authorities = usuario.getRoles()
 				.stream()
 				.map(role -> new SimpleGrantedAuthority(role.getNombre()))
@@ -45,7 +46,18 @@ public class UsuarioService implements IUsuarioService,UserDetailsService {
 				.collect(Collectors.toList());
 		
 		return new User(usuario.getUsername(), usuario.getPassword(), usuario.getEnabled(), true, true,true, authorities);
-				
+		} catch (FeignException e) {
+			String error = "Error en el login, no existe el usuario '" + username + "' en el sistema";
+			log.error(error);
+
+			throw new UsernameNotFoundException(error);
+		}		
+	}
+
+	@Override
+	public Usuario updateUsuario(Usuario usuario, Long id) {
+		// TODO Auto-generated method stub
+		return client.updateUsuario(usuario, id);
 	}
 	
 	
